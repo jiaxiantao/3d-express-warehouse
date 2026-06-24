@@ -1,0 +1,14 @@
+blank_issues_enabled: false
+contact_links:
+  - name: Question / 使用咨询
+    url: https://github.com/jiaxiantao/3d-express-warehouse/issues/new?template=question.yml
+    about: How to run, deploy, or integrate the warehouse demo
+  - name: Contributing guide
+    url: https://github.com/jiaxiantao/3d-express-warehouse/blob/main/CONTRIBUTING.md
+    about: Development setup and pull request guidelines
+  - name: Support policy
+    url: https://github.com/jiaxiantao/3d-express-warehouse/blob/main/SUPPORT.md
+    about: Where to get help
+  - name: Security policy
+    url: https://github.com/jiaxiantao/3d-express-warehouse/blob/main/SECURITY.md
+    about: Report vulnerabilities privately

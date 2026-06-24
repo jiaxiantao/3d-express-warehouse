@@ -1,0 +1,13 @@
+# Docker build context — 3D Express Warehouse
+
+.git
+.github
+.next
+out
+node_modules
+docs
+coverage
+.cursor
+*.log
+.env*
+.DS_Store
