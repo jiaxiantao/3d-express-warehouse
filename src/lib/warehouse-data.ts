@@ -118,12 +118,21 @@ function createInitialSlots(): WarehouseSlot[] {
   return slots;
 }
 
+function pickRestockProduct(slotId: string) {
+  const hash = slotId.split("").reduce((acc, char) => acc + char.charCodeAt(0), 0);
+  return SAMPLE_PRODUCTS[hash % SAMPLE_PRODUCTS.length];
+}
+
+export function isValidSlotId(slotId: string): boolean {
+  return /^[A-C]-(0[1-6])-[LR][1-4]$/.test(slotId);
+}
+
 export function computeWarehouseStats(slots: WarehouseSlot[]): WarehouseStats {
   const totalSlots = slots.length;
   const emptySlots = slots.filter((s) => s.status === "empty").length;
   const lowStockSlots = slots.filter((s) => s.status === "low").length;
   const warningSlots = slots.filter((s) => s.status === "warning").length;
-  const occupiedSlots = totalSlots - emptySlots - slots.filter((s) => s.status === "reserved").length;
+  const occupiedSlots = slots.filter((s) => s.quantity > 0).length;
 
   return {
     totalSlots,
@@ -131,7 +140,7 @@ export function computeWarehouseStats(slots: WarehouseSlot[]): WarehouseStats {
     emptySlots,
     lowStockSlots,
     warningSlots,
-    utilizationPercent: totalSlots > 0 ? Math.round(((totalSlots - emptySlots) / totalSlots) * 100) : 0,
+    utilizationPercent: totalSlots > 0 ? Math.round((occupiedSlots / totalSlots) * 100) : 0,
   };
 }
 
@@ -153,9 +162,16 @@ export function applySlotAction(slots: WarehouseSlot[], slotId: string, action: 
           return slot;
         }
         const nextQty = Math.min(slot.capacity, slot.quantity + Math.ceil(slot.capacity * 0.4));
+        const product =
+          slot.quantity > 0 && slot.sku && slot.productName
+            ? { sku: slot.sku, name: slot.productName, unit: slot.unit }
+            : pickRestockProduct(slot.id);
         return {
           ...slot,
           quantity: nextQty,
+          sku: product.sku,
+          productName: product.name,
+          unit: product.unit,
           status: deriveStatus(nextQty, slot.capacity, false),
           lastUpdated: now,
         };

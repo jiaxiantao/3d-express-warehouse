@@ -3,6 +3,7 @@
 import { useCallback, useState } from "react";
 
 import { Button } from "@/components/ui/button";
+import { WarehouseSlotQr } from "@/components/warehouse-slot-qr";
 import { SLOT_STATUS_LABELS } from "@/lib/warehouse-colors";
 import type { SlotAction, WarehouseSlot } from "@/lib/warehouse-types";
 
@@ -80,7 +81,7 @@ export function WarehouseSlotPanel({ slot, onAction, onClose }: WarehouseSlotPan
           📦
         </div>
         <p className="text-sm text-slate-300">点击 3D 场景中的彩色货位</p>
-        <p className="mt-1 text-xs text-slate-500">选中后可在此面板执行补货、清空、锁定等操作，场景会同步播放动画</p>
+        <p className="mt-1 text-xs text-slate-500">或使用下方「扫码定位」扫描商品 SKU，自动跳转至对应货位</p>
       </section>
     );
   }
@@ -113,6 +114,9 @@ export function WarehouseSlotPanel({ slot, onAction, onClose }: WarehouseSlotPan
           <p className="mt-1 font-medium text-slate-100">{slot.productName ?? "— 空闲货位 —"}</p>
           <p className="mt-1 text-xs text-slate-500">SKU：{slot.sku ?? "无"}</p>
         </div>
+        {slot.sku && slot.productName ? (
+          <WarehouseSlotQr sku={slot.sku} productName={slot.productName} />
+        ) : null}
         <div className="rounded-2xl border border-white/10 bg-white/5 p-4">
           <p className="text-xs text-slate-400">库存量</p>
           <p className="mt-1 text-2xl font-semibold text-white">

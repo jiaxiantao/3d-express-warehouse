@@ -303,6 +303,20 @@ function createSelectedOutlineLines(colors: { base: number; flow: number; glow: 
   return { lineGeometry, baseLine, flowLine, glowLine };
 }
 
+function usePrefersReducedMotion() {
+  const [reduced, setReduced] = useState(false);
+
+  useEffect(() => {
+    const media = window.matchMedia("(prefers-reduced-motion: reduce)");
+    const update = () => setReduced(media.matches);
+    update();
+    media.addEventListener("change", update);
+    return () => media.removeEventListener("change", update);
+  }, []);
+
+  return reduced;
+}
+
 function SelectedSlotOutline({
   slot,
   actionPulse,
@@ -312,6 +326,7 @@ function SelectedSlotOutline({
 }) {
   const groupRef = useRef<THREE.Group>(null);
   const invalidate = useThree((state) => state.invalidate);
+  const reducedMotion = usePrefersReducedMotion();
   const actionStartedAt = useRef<number | null>(null);
   const actionType = useRef<WarehouseActionPulse["action"] | null>(null);
 
@@ -335,6 +350,10 @@ function SelectedSlotOutline({
   }, [flowLine, glowLine]);
 
   const [boxSx, boxSy, boxSz] = useMemo(() => getOutlineBoxScale(), []);
+
+  useLayoutEffect(() => {
+    invalidate();
+  }, [invalidate, slot.id]);
 
   useEffect(() => {
     if (!actionPulse || actionPulse.slotId !== slot.id) {
@@ -362,7 +381,7 @@ function SelectedSlotOutline({
     }
 
     const dash = outlineDashRef.current;
-    if (dash) {
+    if (!reducedMotion && dash) {
       dash.flow.dashOffset = -state.clock.elapsedTime * 1.8;
       dash.glow.dashOffset = state.clock.elapsedTime * 1.1;
     }
@@ -373,9 +392,9 @@ function SelectedSlotOutline({
     let scaleMul = 1;
 
     if (actionStartedAt.current && actionType.current) {
-      const progress = actionProgress(actionStartedAt.current, performance.now());
-      if (isActionRunning(actionStartedAt.current, performance.now())) {
-        const visual = getActionVisual(actionType.current, progress);
+      const now = performance.now();
+      if (isActionRunning(actionStartedAt.current, now)) {
+        const visual = getActionVisual(actionType.current, actionProgress(actionStartedAt.current, now));
         shakeX = visual.shakeX;
         yLift = visual.yLift;
         scaleMul = visual.scaleMul;
@@ -387,7 +406,11 @@ function SelectedSlotOutline({
 
     group.position.set(x + shakeX, y + yLift, z);
     group.scale.set(boxSx * scaleMul, boxSy * scaleMul, boxSz * scaleMul);
-    invalidate();
+
+    // demand 模式：流动描边需每帧 invalidate，节流会导致动画卡顿
+    if (!reducedMotion || actionStartedAt.current) {
+      invalidate();
+    }
   });
 
   return (
@@ -430,7 +453,6 @@ type StatusSlotBatchProps = {
   entries: GroupedSlot[];
   material: THREE.MeshBasicMaterial;
   highlightedFilter: SlotStatus | "all";
-  selectedIndex: number;
   hoveredIndex: number | null;
   actionPulse: WarehouseActionPulse | null;
   onSelectSlot: (slotId: string | null) => void;
@@ -442,7 +464,6 @@ function DimmedTransparentSlotBatch({
   status,
   entries,
   material,
-  selectedIndex,
   hoveredIndex,
   actionPulse,
   onSelectSlot,
@@ -481,12 +502,18 @@ function DimmedTransparentSlotBatch({
 
   useFrame(() => {
     const now = performance.now();
-    let keepAnimating = entries.some((entry) => entry.slotIndex === selectedIndex);
+    let animating = false;
 
-    if (actionRef.current && !isActionRunning(actionRef.current.startedAt, now)) {
-      actionRef.current = null;
-    } else if (actionRef.current) {
-      keepAnimating = true;
+    if (actionRef.current) {
+      if (!isActionRunning(actionRef.current.startedAt, now)) {
+        actionRef.current = null;
+      } else {
+        animating = true;
+      }
+    }
+
+    if (!animating && bootFrames.current <= 0) {
+      return;
     }
 
     entries.forEach(({ slot, slotIndex }, localIndex) => {
@@ -506,12 +533,10 @@ function DimmedTransparentSlotBatch({
       mesh.scale.set(transform.sx, transform.sy, transform.sz);
     });
 
-    if (keepAnimating || bootFrames.current > 0) {
-      if (bootFrames.current > 0) {
-        bootFrames.current -= 1;
-      }
-      invalidate();
+    if (bootFrames.current > 0) {
+      bootFrames.current -= 1;
     }
+    invalidate();
   });
 
   const handlePointerOut = useCallback(() => {
@@ -556,7 +581,6 @@ function InstancedStatusSlotBatch({
   entries,
   material,
   highlightedFilter,
-  selectedIndex,
   hoveredIndex,
   actionPulse,
   onSelectSlot,
@@ -643,22 +667,26 @@ function InstancedStatusSlotBatch({
     }
 
     const now = performance.now();
-    let keepAnimating = entries.some((entry) => entry.slotIndex === selectedIndex);
+    let animating = false;
 
-    if (actionRef.current && !isActionRunning(actionRef.current.startedAt, now)) {
-      actionRef.current = null;
-    } else if (actionRef.current) {
-      keepAnimating = true;
+    if (actionRef.current) {
+      if (!isActionRunning(actionRef.current.startedAt, now)) {
+        actionRef.current = null;
+      } else {
+        animating = true;
+      }
+    }
+
+    if (!animating && bootFrames.current <= 0) {
+      return;
     }
 
     paintInstances();
 
-    if (keepAnimating || bootFrames.current > 0) {
-      if (bootFrames.current > 0) {
-        bootFrames.current -= 1;
-      }
-      invalidate();
+    if (bootFrames.current > 0) {
+      bootFrames.current -= 1;
     }
+    invalidate();
   });
 
   const handlePointerOver = useCallback(
@@ -742,7 +770,6 @@ function AnimatedInstancedSlots({
           material: statusMaterials[status],
           entries: grouped[status],
           highlightedFilter,
-          selectedIndex,
           hoveredIndex,
           actionPulse,
           onSelectSlot,
@@ -1044,12 +1071,14 @@ export const WarehouseScene = forwardRef<WarehouseSceneHandle, WarehouseScenePro
   return (
     <div
       ref={containerRef}
+      role="img"
+      aria-label="三维快递仓库货位场景，点击货位可选中并查看详情"
       className="relative h-[58vh] min-h-[440px] overflow-hidden rounded-3xl border border-cyan-200/15 bg-slate-950/80 shadow-[0_0_60px_rgba(34,211,238,0.08)] sm:h-[620px]"
     >
       <Canvas
         frameloop="demand"
         dpr={1}
-        gl={{ antialias: true, alpha: false, powerPreference: "default", preserveDrawingBuffer: false }}
+        gl={{ antialias: true, alpha: false, powerPreference: "default", preserveDrawingBuffer: true }}
         camera={{ position: [9, 6.5, 11], fov: 45, near: 0.1, far: 80 }}
         onCreated={({ gl, invalidate }) => {
           gl.sortObjects = true;

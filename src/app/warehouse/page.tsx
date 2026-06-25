@@ -4,6 +4,7 @@ import dynamic from "next/dynamic";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 import { WarehouseQuickActions } from "@/components/warehouse-quick-actions";
+import { WarehouseQrScanner } from "@/components/warehouse-qr-scanner";
 import { WarehouseSlotPanel } from "@/components/warehouse-slot-panel";
 import { WarehouseStatsBar } from "@/components/warehouse-stats-bar";
 import type { WarehouseActionPulse } from "@/lib/warehouse-animations";
@@ -12,6 +13,7 @@ import {
   computeWarehouseStats,
   createWarehouseState,
   getSlotById,
+  isValidSlotId,
 } from "@/lib/warehouse-data";
 import type { WarehouseSceneHandle } from "@/lib/warehouse-scene-types";
 import type { SlotAction, SlotStatus, WarehouseViewMode } from "@/lib/warehouse-types";
@@ -19,13 +21,14 @@ import {
   readWarehouseUrlState,
   useWarehouseUrlState,
 } from "@/lib/use-warehouse-url-state";
+import { resolveWarehouseScan } from "@/lib/warehouse-scan";
 
 const WarehouseScene = dynamic(
   () => import("@/components/warehouse-scene").then((mod) => mod.WarehouseScene),
   {
     ssr: false,
     loading: () => (
-      <div className="flex h-full min-h-[440px] items-center justify-center rounded-3xl border border-cyan-200/10 bg-slate-950/80 text-sm text-slate-400">
+      <div className="flex h-[58vh] min-h-[440px] items-center justify-center rounded-3xl border border-cyan-200/10 bg-slate-950/80 text-sm text-slate-400 sm:h-[620px]">
         <div className="flex flex-col items-center gap-3">
           <span className="h-8 w-8 animate-pulse rounded-full border-2 border-cyan-300/40 border-t-cyan-300" />
           加载 3D 仓库引擎…
@@ -53,16 +56,25 @@ export default function WarehousePage() {
   const [isFullscreen, setIsFullscreen] = useState(false);
   const [statusMessage, setStatusMessage] = useState<string | null>(null);
   const [actionPulse, setActionPulse] = useState<WarehouseActionPulse | null>(null);
+  const [scannerOpen, setScannerOpen] = useState(false);
 
   const sceneHandleRef = useRef<WarehouseSceneHandle | null>(null);
+  const panelRef = useRef<HTMLElement>(null);
   const statusTimerRef = useRef<number | null>(null);
   const actionSeqRef = useRef(0);
 
   /* eslint-disable react-hooks/set-state-in-effect -- one-shot URL hydration on mount */
   useEffect(() => {
     const initial = readWarehouseUrlState();
-    if (initial.slotId) {
+    const seedSlots = createWarehouseState();
+
+    if (initial.slotId && isValidSlotId(initial.slotId) && getSlotById(seedSlots, initial.slotId)) {
       setSelectedSlotId(initial.slotId);
+    } else if (initial.sku) {
+      const located = resolveWarehouseScan(seedSlots, initial.sku);
+      if (located.ok) {
+        setSelectedSlotId(located.slot.id);
+      }
     }
     if (initial.viewMode) {
       setViewMode(initial.viewMode);
@@ -73,7 +85,17 @@ export default function WarehousePage() {
   }, []);
   /* eslint-enable react-hooks/set-state-in-effect */
 
-  useWarehouseUrlState({ slotId: selectedSlotId, viewMode, filter });
+  useEffect(() => {
+    if (!selectedSlotId) {
+      return;
+    }
+    const mobile = window.matchMedia("(max-width: 1023px)");
+    if (mobile.matches) {
+      panelRef.current?.scrollIntoView({ behavior: "smooth", block: "nearest" });
+    }
+  }, [selectedSlotId]);
+
+  useWarehouseUrlState({ slotId: selectedSlotId, viewMode, filter, sku: null });
 
   useEffect(() => {
     const handleChange = () => {
@@ -104,6 +126,28 @@ export default function WarehousePage() {
       }
     },
     [],
+  );
+
+  const locateFromScan = useCallback(
+    (raw: string) => {
+      const result = resolveWarehouseScan(slots, raw);
+      if (!result.ok) {
+        showStatus(result.message);
+        return;
+      }
+
+      setFilter("all");
+      setSelectedSlotId(result.slot.id);
+      setScannerOpen(false);
+
+      const productLabel = result.slot.productName ?? result.sku ?? result.slot.sku ?? "商品";
+      if (result.duplicates > 1) {
+        showStatus(`已定位 ${productLabel} → 货位 ${result.slot.id}（共 ${result.duplicates} 个货位）`);
+      } else {
+        showStatus(`已定位 ${productLabel} → 货位 ${result.slot.id}`);
+      }
+    },
+    [showStatus, slots],
   );
 
   const handleSlotAction = useCallback(
@@ -168,7 +212,7 @@ export default function WarehousePage() {
         <div className="space-y-1">
           <p className="text-[11px] uppercase tracking-[0.32em] text-cyan-300/60">3D Express Warehouse</p>
           <h1 className="text-2xl font-semibold tracking-tight text-white md:text-3xl">快递仓储三维可视化</h1>
-          <p className="text-sm text-slate-400">点击货位查看详情，操作按钮触发 3D 动画反馈</p>
+          <p className="text-sm text-slate-400">点击货位查看详情，或扫码 SKU 快速定位商品所在货位</p>
         </div>
         <div className="rounded-2xl border border-white/10 bg-slate-950/50 px-4 py-2 text-right text-xs text-slate-400">
           <p>
@@ -211,6 +255,7 @@ export default function WarehousePage() {
                 onChangeViewMode={setViewMode}
                 onCaptureScreenshot={handleScreenshot}
                 onToggleFullscreen={handleToggleFullscreen}
+                onOpenScanner={() => setScannerOpen(true)}
                 isFullscreen={isFullscreen}
                 capturing={capturing}
               />
@@ -218,7 +263,7 @@ export default function WarehousePage() {
           </div>
         </div>
 
-        <aside className="lg:sticky lg:top-6">
+        <aside ref={panelRef} className="lg:sticky lg:top-6">
           <WarehouseSlotPanel
             slot={selectedSlot}
             onAction={handleSlotAction}
@@ -226,6 +271,10 @@ export default function WarehousePage() {
           />
         </aside>
       </div>
+
+      {scannerOpen ? (
+        <WarehouseQrScanner onClose={() => setScannerOpen(false)} onScan={locateFromScan} />
+      ) : null}
     </main>
   );
 }

@@ -14,6 +14,7 @@ type WarehouseQuickActionsProps = {
   onChangeViewMode: (mode: WarehouseViewMode) => void;
   onCaptureScreenshot: () => void;
   onToggleFullscreen: () => void;
+  onOpenScanner: () => void;
   isFullscreen: boolean;
   capturing?: boolean;
 };
@@ -26,6 +27,7 @@ export function WarehouseQuickActions({
   onChangeViewMode,
   onCaptureScreenshot,
   onToggleFullscreen,
+  onOpenScanner,
   isFullscreen,
   capturing,
 }: WarehouseQuickActionsProps) {
@@ -59,6 +61,15 @@ export function WarehouseQuickActions({
         })}
       </div>
 
+      <button
+        type="button"
+        onClick={onOpenScanner}
+        className={ICON_BUTTON_CLASS}
+        aria-label="扫描二维码定位商品货位"
+      >
+        <span aria-hidden>⌁</span>
+        <span>扫码定位</span>
+      </button>
       <button
         type="button"
         onClick={onCaptureScreenshot}

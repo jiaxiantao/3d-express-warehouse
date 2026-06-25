@@ -7,6 +7,25 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- 扫码定位：扫描商品 SKU 二维码（或手动输入）自动选中 3D 货位；货位面板展示商品定位码。
+- 支持 URL `?sku=SKU-1001` 深链入口，兼容 `3dew:sku:` 短码与货位码。
+
+### Changed
+
+- 状态筛选保留未匹配货位半透明效果（独立 mesh 批次），匹配货位仍用 InstancedMesh 高亮。
+- 货位批次 `useFrame` 仅在补货动画或首屏引导时刷新，空闲时不再每帧重绘矩阵。
+- 选中描边尊重 `prefers-reduced-motion`（静态描边，无流动动画）。
+- 统计卡片支持点击筛选（空闲 / 低库存 / 异常），筛选芯片增加 `aria-pressed`。
+- 移动端选中货位后自动滚动至详情面板；URL `slot` 参数校验格式与存在性。
+- 截图启用 `preserveDrawingBuffer`，提升 demand 渲染模式下导出成功率。
+
+### Fixed
+
+- `computeWarehouseStats` 在库数与利用率统一按 `quantity > 0` 计算。
+- 空货位补货时自动填充 SKU 与商品名称。
+
 ## [1.0.0] - 2026-06-24
 
 ### Added

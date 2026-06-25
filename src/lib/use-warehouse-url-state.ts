@@ -19,6 +19,7 @@ export type WarehouseUrlState = {
   slotId: string | null;
   viewMode: WarehouseViewMode;
   filter: SlotStatus | "all";
+  sku: string | null;
 };
 
 function readParam(search: URLSearchParams, key: string): string | null {
@@ -36,6 +37,7 @@ export function readWarehouseUrlState(): Partial<WarehouseUrlState> {
 
   return {
     slotId: readParam(search, "slot"),
+    sku: readParam(search, "sku"),
     viewMode:
       viewMode && VALID_VIEW_MODES.includes(viewMode as WarehouseViewMode)
         ? (viewMode as WarehouseViewMode)
@@ -63,6 +65,7 @@ export function useWarehouseUrlState(state: WarehouseUrlState) {
     if (state.filter !== "all") {
       params.set("filter", state.filter);
     }
+    // sku 仅用于外部扫码入口，定位成功后由 slot 参数承载，不再写入 URL
 
     const next = params.toString();
     const current = window.location.search.replace(/^\?/, "");

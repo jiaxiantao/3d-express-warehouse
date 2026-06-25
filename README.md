@@ -33,7 +33,8 @@ Open-source **3D warehouse visualization** for logistics and WMS demos. Built wi
 | **Status filter** | Highlight matching slots; dim others with transparency |
 | **Slot panel** | SKU, quantity, fill bar, one-click restock / clear / lock / reserve / mark warning |
 | **Camera presets** | Overview, aisle, top-down; screenshot and fullscreen |
-| **Deep links** | Selected slot, view mode, and filter sync to URL query params |
+| **Deep links** | Selected slot, view mode, filter, and SKU scan entry (`?sku=`) sync to URL query params |
+| **QR locate** | Scan product SKU QR to jump to the slot in 3D; panel shows locate QR per SKU |
 | **Performance** | Instanced meshes grouped by status; Three.js loaded only on `/warehouse` |
 
 ## Quick start
