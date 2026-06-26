@@ -91,6 +91,9 @@ export function WarehouseRobotPad({ sceneHandleRef }: WarehouseRobotPadProps) {
   );
 
   useEffect(() => {
+    const keys = pressedKeys.current;
+    const sceneHandle = sceneHandleRef.current;
+
     const onKeyDown = (event: KeyboardEvent) => {
       if (isEditableTarget(event.target) || !DRIVE_KEYS.has(event.code)) {
         return;
@@ -126,12 +129,12 @@ export function WarehouseRobotPad({ sceneHandleRef }: WarehouseRobotPadProps) {
       window.removeEventListener("keydown", onKeyDown);
       window.removeEventListener("keyup", onKeyUp);
       window.removeEventListener("blur", onBlur);
-      pressedKeys.current.clear();
+      keys.clear();
       pointerMove.current = null;
       pointerTurn.current = null;
       setActiveMove(null);
       setActiveTurn(null);
-      sceneHandleRef.current?.setRobotDrive(null);
+      sceneHandle?.setRobotDrive(null);
     };
   }, [applyControls, sceneHandleRef]);
 

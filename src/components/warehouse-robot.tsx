@@ -261,10 +261,6 @@ export function WarehouseRobot({ pivotRef, headRef, motionRef, modelVisible = tr
     }
   }, [eyeAnchorNode, headRef]);
 
-  useEffect(() => {
-    root.visible = modelVisible;
-  }, [modelVisible, root]);
-
   useLayoutEffect(() => {
     root.updateMatrixWorld(true);
     invalidate();
@@ -299,7 +295,7 @@ export function WarehouseRobot({ pivotRef, headRef, motionRef, modelVisible = tr
       position={[WAREHOUSE_ROBOT.spawn.x, WAREHOUSE_GROUND_Y, WAREHOUSE_ROBOT.spawn.z]}
       rotation={[0, WAREHOUSE_ROBOT.spawn.yaw, 0]}
     >
-      <primitive object={root} />
+      <primitive object={root} visible={modelVisible} />
       <WarehouseRobotAnimator rig={animationRig} motionRef={motionRef} />
     </group>
   );
