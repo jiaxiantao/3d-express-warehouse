@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useRef } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 
 import type {
   RobotDriveState,
@@ -8,13 +8,15 @@ import type {
   RobotTurnDirection,
 } from "@/lib/warehouse-robot-drive";
 import type { WarehouseSceneHandle } from "@/lib/warehouse-scene-types";
+import { cn } from "@/lib/utils";
 
 type WarehouseRobotPadProps = {
   sceneHandleRef: React.RefObject<WarehouseSceneHandle | null>;
 };
 
-const PAD_BUTTON_CLASS =
-  "flex h-10 w-10 items-center justify-center rounded-xl border border-white/15 bg-slate-950/75 text-base font-semibold text-slate-100 shadow-lg backdrop-blur-sm transition active:scale-95 active:border-cyan-300/40 active:bg-slate-900/90 select-none touch-none";
+const PAD_BUTTON_BASE =
+  "flex h-10 w-10 items-center justify-center rounded-xl border border-white/15 bg-slate-950/75 text-base font-semibold text-slate-100 shadow-lg backdrop-blur-sm transition select-none touch-none";
+const PAD_BUTTON_ACTIVE = "scale-95 border-cyan-300/40 bg-slate-900/90 text-cyan-100";
 
 const FORWARD_KEYS = new Set(["ArrowUp", "KeyW"]);
 const BACK_KEYS = new Set(["ArrowDown", "KeyS"]);
@@ -43,6 +45,8 @@ export function WarehouseRobotPad({ sceneHandleRef }: WarehouseRobotPadProps) {
   const pressedKeys = useRef(new Set<string>());
   const pointerMove = useRef<RobotMoveDirection | null>(null);
   const pointerTurn = useRef<RobotTurnDirection | null>(null);
+  const [activeMove, setActiveMove] = useState<RobotMoveDirection | null>(null);
+  const [activeTurn, setActiveTurn] = useState<RobotTurnDirection | null>(null);
 
   const applyControls = useCallback(() => {
     const keys = pressedKeys.current;
@@ -62,6 +66,9 @@ export function WarehouseRobotPad({ sceneHandleRef }: WarehouseRobotPadProps) {
 
     move = pointerMove.current ?? move;
     turn = pointerTurn.current ?? turn;
+
+    setActiveMove(move);
+    setActiveTurn(turn);
 
     const state: RobotDriveState | null = move || turn ? { move, turn } : null;
     sceneHandleRef.current?.setRobotDrive(state);
@@ -122,6 +129,8 @@ export function WarehouseRobotPad({ sceneHandleRef }: WarehouseRobotPadProps) {
       pressedKeys.current.clear();
       pointerMove.current = null;
       pointerTurn.current = null;
+      setActiveMove(null);
+      setActiveTurn(null);
       sceneHandleRef.current?.setRobotDrive(null);
     };
   }, [applyControls, sceneHandleRef]);
@@ -179,7 +188,8 @@ export function WarehouseRobotPad({ sceneHandleRef }: WarehouseRobotPadProps) {
       <button
         type="button"
         aria-label="前进（↑ 或 W）"
-        className={PAD_BUTTON_CLASS}
+        aria-pressed={activeMove === "forward"}
+        className={cn(PAD_BUTTON_BASE, activeMove === "forward" && PAD_BUTTON_ACTIVE)}
         {...bindMove("forward")}
       >
         ↑
@@ -189,7 +199,8 @@ export function WarehouseRobotPad({ sceneHandleRef }: WarehouseRobotPadProps) {
       <button
         type="button"
         aria-label="左转（← 或 A）"
-        className={PAD_BUTTON_CLASS}
+        aria-pressed={activeTurn === "left"}
+        className={cn(PAD_BUTTON_BASE, activeTurn === "left" && PAD_BUTTON_ACTIVE)}
         {...bindTurn("left")}
       >
         ←
@@ -198,7 +209,8 @@ export function WarehouseRobotPad({ sceneHandleRef }: WarehouseRobotPadProps) {
       <button
         type="button"
         aria-label="右转（→ 或 D）"
-        className={PAD_BUTTON_CLASS}
+        aria-pressed={activeTurn === "right"}
+        className={cn(PAD_BUTTON_BASE, activeTurn === "right" && PAD_BUTTON_ACTIVE)}
         {...bindTurn("right")}
       >
         →
@@ -208,7 +220,8 @@ export function WarehouseRobotPad({ sceneHandleRef }: WarehouseRobotPadProps) {
       <button
         type="button"
         aria-label="后退（↓ 或 S）"
-        className={PAD_BUTTON_CLASS}
+        aria-pressed={activeMove === "back"}
+        className={cn(PAD_BUTTON_BASE, activeMove === "back" && PAD_BUTTON_ACTIVE)}
         {...bindMove("back")}
       >
         ↓

@@ -13,12 +13,6 @@ type WarehouseRobotAnimatorProps = {
   motionRef: React.RefObject<RobotMotionState>;
 };
 
-/** 起播并跳过片段开头的前摇（按相位定位到迈步阶段） */
-function startWalkAtPhase(walkAction: THREE.AnimationAction, phase: number) {
-  walkAction.reset().setEffectiveWeight(1).play();
-  walkAction.time = walkAction.getClip().duration * phase;
-}
-
 export function WarehouseRobotAnimator({ rig, motionRef }: WarehouseRobotAnimatorProps) {
   const invalidate = useThree((state) => state.invalidate);
   const wasWalking = useRef(false);
@@ -45,18 +39,15 @@ export function WarehouseRobotAnimator({ rig, motionRef }: WarehouseRobotAnimato
       walkTimeScaleMin,
       walkTimeScaleMax,
       walkFadeOut,
-      walkStartPhase,
     } = WAREHOUSE_ROBOT.locomotion;
 
     const shouldWalk = Boolean(motion?.isMoving);
     let animating = false;
 
     if (shouldWalk) {
-      if (!wasWalking.current) {
-        // 起步：立即起播，并跳过片段开头的前摇，避免「已移动但腿不动」
-        startWalkAtPhase(walkAction, walkStartPhase);
-      } else if (!walkAction.isRunning()) {
-        startWalkAtPhase(walkAction, walkStartPhase);
+      // 片段已裁成纯迈步循环，直接从头起播即可（无前摇/无真空期）
+      if (!wasWalking.current || !walkAction.isRunning()) {
+        walkAction.reset().setEffectiveWeight(1).play();
       }
 
       const speed = Math.max(motion?.speed ?? 0, 0.35);

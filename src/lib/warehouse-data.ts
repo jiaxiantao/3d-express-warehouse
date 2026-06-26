@@ -1,21 +1,11 @@
-import { WAREHOUSE_LAYOUT } from "@/lib/warehouse-layout";
+import { WAREHOUSE_LAYOUT, type WarehouseAisle } from "@/lib/warehouse-layout";
+import { pickProductForAisle } from "@/lib/warehouse-rack-category";
 import type {
   SlotAction,
   SlotStatus,
   WarehouseSlot,
   WarehouseStats,
 } from "@/lib/warehouse-types";
-
-const SAMPLE_PRODUCTS = [
-  { sku: "SKU-1001", name: "蓝牙耳机 Pro", unit: "箱" },
-  { sku: "SKU-1002", name: "运动水杯 500ml", unit: "箱" },
-  { sku: "SKU-1003", name: "USB-C 数据线", unit: "箱" },
-  { sku: "SKU-1004", name: "无线鼠标", unit: "箱" },
-  { sku: "SKU-1005", name: "手机支架", unit: "箱" },
-  { sku: "SKU-1006", name: "收纳盒套装", unit: "箱" },
-  { sku: "SKU-1007", name: "便携充电宝", unit: "箱" },
-  { sku: "SKU-1008", name: "键盘保护膜", unit: "箱" },
-] as const;
 
 function slotId(aisle: string, bay: number, level: number, side: "left" | "right") {
   const sideCode = side === "left" ? "L" : "R";
@@ -44,7 +34,6 @@ const MOCK_DATA_EPOCH_MS = Date.parse("2024-06-01T08:00:00.000Z");
 
 function createInitialSlots(): WarehouseSlot[] {
   const slots: WarehouseSlot[] = [];
-  let productIndex = 0;
 
   for (const aisle of WAREHOUSE_LAYOUT.aisles) {
     for (let bay = 1; bay <= WAREHOUSE_LAYOUT.baysPerAisle; bay += 1) {
@@ -59,27 +48,27 @@ function createInitialSlots(): WarehouseSlot[] {
           let quantity = 0;
           let sku: string | null = null;
           let productName: string | null = null;
+          let unit = "箱";
           let status: SlotStatus = "empty";
 
           if (warning) {
-            const product = SAMPLE_PRODUCTS[productIndex % SAMPLE_PRODUCTS.length];
-            productIndex += 1;
+            const product = pickProductForAisle(aisle, seed);
             quantity = 15;
             sku = product.sku;
             productName = product.name;
+            unit = product.unit;
             status = "warning";
           } else if (reserved) {
             status = "reserved";
           } else if (locked) {
-            const product = SAMPLE_PRODUCTS[productIndex % SAMPLE_PRODUCTS.length];
-            productIndex += 1;
+            const product = pickProductForAisle(aisle, seed);
             quantity = 40;
             sku = product.sku;
             productName = product.name;
+            unit = product.unit;
             status = "locked";
           } else if (seed % 4 !== 0) {
-            const product = SAMPLE_PRODUCTS[productIndex % SAMPLE_PRODUCTS.length];
-            productIndex += 1;
+            const product = pickProductForAisle(aisle, seed + bay * 3 + level);
             const fillPattern = (seed * 17) % 100;
             if (fillPattern > 88) {
               quantity = capacity;
@@ -93,6 +82,7 @@ function createInitialSlots(): WarehouseSlot[] {
             }
             sku = product.sku;
             productName = product.name;
+            unit = product.unit;
           }
 
           slots.push({
@@ -106,7 +96,7 @@ function createInitialSlots(): WarehouseSlot[] {
             productName,
             quantity,
             capacity,
-            unit: sku ? SAMPLE_PRODUCTS.find((p) => p.sku === sku)?.unit ?? "箱" : "箱",
+            unit,
             lastUpdated: new Date(MOCK_DATA_EPOCH_MS - seed * 86_400_000).toISOString(),
             locked,
           });
@@ -119,8 +109,9 @@ function createInitialSlots(): WarehouseSlot[] {
 }
 
 function pickRestockProduct(slotId: string) {
+  const aisle = slotId.charAt(0) as WarehouseAisle;
   const hash = slotId.split("").reduce((acc, char) => acc + char.charCodeAt(0), 0);
-  return SAMPLE_PRODUCTS[hash % SAMPLE_PRODUCTS.length];
+  return pickProductForAisle(aisle, hash);
 }
 
 export function isValidSlotId(slotId: string): boolean {

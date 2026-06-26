@@ -51,6 +51,7 @@ import {
   WAREHOUSE_GROUND_Y,
 } from "@/components/warehouse-environment";
 import { WarehouseFence } from "@/components/warehouse-fence";
+import { WarehouseRackCategoryLabels } from "@/components/warehouse-rack-category-labels";
 import { WarehouseSlotLabels } from "@/components/warehouse-slot-labels";
 import { WarehouseRobot } from "@/components/warehouse-robot";
 import { WarehouseRobotControls, type RobotViewLookApi } from "@/components/warehouse-robot-controls";
@@ -61,6 +62,7 @@ import { createRobotMotionState } from "@/lib/warehouse-robot-motion";
 import { WAREHOUSE_ROBOT } from "@/lib/warehouse-robot-config";
 import { createGodViewOrbitState, createThirdPersonOrbitState, getGodViewTarget, type GodViewOrbitState, type ThirdPersonOrbitState } from "@/lib/warehouse-robot-view-state";
 import type { WarehouseSceneHandle } from "@/lib/warehouse-scene-types";
+import { disposeRackCategoryLabelTextures } from "@/lib/warehouse-rack-category-label";
 import { cn } from "@/lib/utils";
 
 export type { WarehouseSceneHandle };
@@ -341,6 +343,7 @@ function disposeSceneResources(scene: THREE.Scene, gl: THREE.WebGLRenderer) {
       }
     }
   });
+  disposeRackCategoryLabelTextures();
   gl.dispose();
   gl.forceContextLoss();
 }
@@ -1097,6 +1100,14 @@ function pivotHasRobotModel(pivot: THREE.Group | null) {
   return found;
 }
 
+/** Suspense 内机器人挂载后通知外层关闭 loading */
+function RobotReadyNotifier({ onReady }: { onReady: () => void }) {
+  useEffect(() => {
+    onReady();
+  }, [onReady]);
+  return null;
+}
+
 function ChaseThirdPersonCamera({
   robotPivotRef,
   orbitStateRef,
@@ -1340,6 +1351,7 @@ function GodViewControls({
 function WarehouseRobotRig({
   viewMode,
   onGroundClick,
+  onRobotReady,
   pivotRef,
   driveStateRef,
   thirdPersonOrbitRef,
@@ -1348,6 +1360,7 @@ function WarehouseRobotRig({
 }: {
   viewMode: WarehouseViewMode;
   onGroundClick?: () => void;
+  onRobotReady?: () => void;
   pivotRef: React.RefObject<THREE.Group | null>;
   driveStateRef: React.RefObject<RobotDriveState | null>;
   thirdPersonOrbitRef: React.RefObject<ThirdPersonOrbitState>;
@@ -1371,6 +1384,7 @@ function WarehouseRobotRig({
           motionRef={motionRef}
           modelVisible={!robotView}
         />
+        {onRobotReady ? <RobotReadyNotifier onReady={onRobotReady} /> : null}
       </Suspense>
       <WarehouseRobotFloorNav
         pivotRef={pivotRef}
@@ -1409,9 +1423,11 @@ function SceneContent({
   viewMode,
   actionPulse,
   onSelectSlot,
+  onRobotReady,
   controlHandleRef,
   containerRef,
 }: Omit<WarehouseSceneProps, "controlHandleRef"> & {
+  onRobotReady?: () => void;
   controlHandleRef?: React.RefObject<WarehouseSceneHandle | null>;
   containerRef: React.RefObject<HTMLDivElement | null>;
 }) {
@@ -1429,6 +1445,7 @@ function SceneContent({
       <WarehouseFloor />
       <WarehouseFence />
       <RackFrames />
+      <WarehouseRackCategoryLabels />
       <DemandRenderBoot />
       <AnimatedInstancedSlots
         slots={slots}
@@ -1444,6 +1461,7 @@ function SceneContent({
         thirdPersonOrbitRef={thirdPersonOrbitRef}
         godOrbitRef={godOrbitRef}
         viewLookApiRef={viewLookApiRef}
+        onRobotReady={onRobotReady}
         onGroundClick={() => onSelectSlot(null)}
       />
       <SceneHandleBridge
@@ -1529,6 +1547,8 @@ export const WarehouseScene = forwardRef<WarehouseSceneHandle, WarehouseScenePro
 ) {
   const containerRef = useRef<HTMLDivElement>(null);
   const innerHandleRef = useRef<WarehouseSceneHandle | null>(null);
+  const [robotLoading, setRobotLoading] = useState(true);
+  const handleRobotReady = useCallback(() => setRobotLoading(false), []);
   const cameraConfig = useMemo(() => {
     if (viewMode === "robot") {
       return ROBOT_VIEW_CAMERA;
@@ -1585,10 +1605,27 @@ export const WarehouseScene = forwardRef<WarehouseSceneHandle, WarehouseScenePro
           viewMode={viewMode}
           actionPulse={actionPulse}
           onSelectSlot={onSelectSlot}
+          onRobotReady={handleRobotReady}
           controlHandleRef={controlHandleRef ?? innerHandleRef}
           containerRef={containerRef}
         />
       </Canvas>
+      {robotLoading ? (
+        <div
+          className="pointer-events-none absolute inset-0 z-20 flex items-center justify-center bg-slate-950/35 backdrop-blur-[2px]"
+          role="status"
+          aria-live="polite"
+          aria-busy="true"
+        >
+          <div className="flex items-center gap-3 rounded-2xl border border-cyan-300/25 bg-slate-950/90 px-5 py-3 text-sm font-medium text-cyan-100 shadow-lg backdrop-blur-sm">
+            <span
+              className="h-4 w-4 shrink-0 animate-spin rounded-full border-2 border-cyan-300/25 border-t-cyan-300"
+              aria-hidden
+            />
+            机器人正在加载中…
+          </div>
+        </div>
+      ) : null}
     </div>
   );
 });

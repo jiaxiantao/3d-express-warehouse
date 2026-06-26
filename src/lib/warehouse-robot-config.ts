@@ -81,10 +81,12 @@ export const WAREHOUSE_ROBOT = {
     turnLeanAmplitude: 0,
     turnLeanDamp: 0.14,
     /**
-     * 起播相位（0~1，相对片段总时长）：跳过行走片段开头的「前摇」过渡帧，
-     * 让起步瞬间直接进入迈步动作。0 表示从头播放，调大可跳过更多前摇。
+     * 循环裁剪相位（0~1，相对片段总时长）：把行走片段裁成只剩迈步主体再循环，
+     * 去掉开头「前摇」与结尾「后摇」的静止帧，避免循环回绕时出现动画真空期。
+     * walkStartPhase 裁掉开头，walkEndPhase 裁掉结尾。
      */
-    walkStartPhase: 0.18,
+    walkStartPhase: 0.1,
+    walkEndPhase: 0.66,
   },
   /** 机身碰撞半径，用于巷道边界留白 */
   bodyRadius: 0.38,

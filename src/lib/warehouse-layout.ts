@@ -107,6 +107,21 @@ export function getRackDepthBeamCenterZ(side: "left" | "right"): number {
   return (frontZ + backZ) / 2;
 }
 
+/** 货架西端（外侧端头）世界 X */
+export function getRackWestEndX(): number {
+  return getRackOriginX() + RACK_POST_THICKNESS / 2;
+}
+
+/** 货架东端（外侧端头）世界 X */
+export function getRackEastEndX(): number {
+  return getRackOriginX() + getRackWidth() - RACK_POST_THICKNESS / 2;
+}
+
+/** 货架纵深中心局部 Z（相对 aisle 原点） */
+export function getRackSideLabelLocalZ(side: "left" | "right"): number {
+  return getRackDepthBeamCenterZ(side);
+}
+
 /** 货架前/后横梁的局部 Z */
 export function getRackFrontLocalZ(side: "left" | "right"): number {
   return side === "left" ? -RACK_POST_THICKNESS / 2 : RACK_POST_THICKNESS / 2;

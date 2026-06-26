@@ -20,16 +20,40 @@ export function resolveWalkClip(clips: THREE.AnimationClip[]): THREE.AnimationCl
   return clips.find((clip) => clip.name === preferred) ?? clips[0] ?? null;
 }
 
+const SUBCLIP_FPS = 30;
+
+/**
+ * 把行走片段裁成只剩迈步主体：去掉开头前摇 / 结尾后摇的静止帧，
+ * 这样 LoopRepeat 循环时不会回放死区，消除「行走却无骨骼动画」的真空期。
+ */
+export function trimWalkClip(source: THREE.AnimationClip): THREE.AnimationClip {
+  const { walkStartPhase, walkEndPhase } = WAREHOUSE_ROBOT.locomotion;
+  if (walkStartPhase <= 0 && walkEndPhase >= 1) {
+    return source;
+  }
+
+  const totalFrames = source.duration * SUBCLIP_FPS;
+  const startFrame = Math.floor(walkStartPhase * totalFrames);
+  // +1 确保末尾关键帧不被 subclip 的 `frame >= endFrame` 规则排除
+  const endFrame = Math.ceil(walkEndPhase * totalFrames) + 1;
+  if (endFrame - startFrame < 2) {
+    return source;
+  }
+
+  return THREE.AnimationUtils.subclip(source, source.name, startFrame, endFrame, SUBCLIP_FPS);
+}
+
 export function setupRobotAnimation(
   model: THREE.Group,
   clips: THREE.AnimationClip[],
   leanTarget: THREE.Object3D,
 ): RobotAnimationRig | null {
-  const clip = resolveWalkClip(clips);
-  if (!clip) {
+  const source = resolveWalkClip(clips);
+  if (!source) {
     return null;
   }
 
+  const clip = trimWalkClip(source);
   const mixer = new THREE.AnimationMixer(model);
   const walkAction = mixer.clipAction(clip);
   walkAction.setLoop(THREE.LoopRepeat, Infinity);
