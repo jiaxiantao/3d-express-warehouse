@@ -3,7 +3,8 @@
 import { useEffect } from "react";
 import type { SlotStatus, WarehouseViewMode } from "@/lib/warehouse-types";
 
-const VALID_VIEW_MODES: WarehouseViewMode[] = ["overview", "aisle", "top"];
+const LEGACY_THIRD_VIEW_MODES = new Set(["overview", "third"]);
+const LEGACY_GOD_VIEW_MODES = new Set(["god", "aisle", "top"]);
 const VALID_FILTERS: Array<SlotStatus | "all"> = [
   "all",
   "empty",
@@ -27,21 +28,30 @@ function readParam(search: URLSearchParams, key: string): string | null {
   return value && value.length > 0 ? value : null;
 }
 
+function parseViewMode(view: string | null): WarehouseViewMode | undefined {
+  if (view === "robot") {
+    return "robot";
+  }
+  if (view && LEGACY_THIRD_VIEW_MODES.has(view)) {
+    return "third";
+  }
+  if (view && LEGACY_GOD_VIEW_MODES.has(view)) {
+    return "god";
+  }
+  return undefined;
+}
+
 export function readWarehouseUrlState(): Partial<WarehouseUrlState> {
   if (typeof window === "undefined") {
     return {};
   }
   const search = new URLSearchParams(window.location.search);
-  const viewMode = readParam(search, "view");
   const filter = readParam(search, "filter");
 
   return {
     slotId: readParam(search, "slot"),
     sku: readParam(search, "sku"),
-    viewMode:
-      viewMode && VALID_VIEW_MODES.includes(viewMode as WarehouseViewMode)
-        ? (viewMode as WarehouseViewMode)
-        : undefined,
+    viewMode: parseViewMode(readParam(search, "view")),
     filter:
       filter && VALID_FILTERS.includes(filter as SlotStatus | "all")
         ? (filter as SlotStatus | "all")
@@ -59,7 +69,7 @@ export function useWarehouseUrlState(state: WarehouseUrlState) {
     if (state.slotId) {
       params.set("slot", state.slotId);
     }
-    if (state.viewMode !== "overview") {
+    if (state.viewMode !== "god") {
       params.set("view", state.viewMode);
     }
     if (state.filter !== "all") {

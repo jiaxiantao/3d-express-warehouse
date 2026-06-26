@@ -4,6 +4,7 @@ import dynamic from "next/dynamic";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 import { WarehouseQuickActions } from "@/components/warehouse-quick-actions";
+import { WarehouseRobotPad } from "@/components/warehouse-robot-pad";
 import { WarehouseQrScanner } from "@/components/warehouse-qr-scanner";
 import { WarehouseSlotPanel } from "@/components/warehouse-slot-panel";
 import { WarehouseStatsBar } from "@/components/warehouse-stats-bar";
@@ -50,7 +51,7 @@ const ACTION_LABELS: Record<SlotAction, string> = {
 export default function WarehousePage() {
   const [slots, setSlots] = useState(createWarehouseState);
   const [selectedSlotId, setSelectedSlotId] = useState<string | null>(null);
-  const [viewMode, setViewMode] = useState<WarehouseViewMode>("overview");
+  const [viewMode, setViewMode] = useState<WarehouseViewMode>("god");
   const [filter, setFilter] = useState<SlotStatus | "all">("all");
   const [capturing, setCapturing] = useState(false);
   const [isFullscreen, setIsFullscreen] = useState(false);
@@ -238,7 +239,12 @@ export default function WarehousePage() {
             controlHandleRef={sceneHandleRef}
           />
 
-          <div className="pointer-events-none absolute inset-x-0 bottom-0 flex flex-col gap-2 p-4">
+          <div className="pointer-events-none absolute inset-0">
+            <div className="absolute bottom-[6.75rem] left-4 z-10 sm:bottom-24">
+              <WarehouseRobotPad sceneHandleRef={sceneHandleRef} />
+            </div>
+
+            <div className="absolute inset-x-0 bottom-0 flex flex-col gap-2 p-4">
             {statusMessage ? (
               <div
                 role="status"
@@ -259,6 +265,7 @@ export default function WarehousePage() {
                 isFullscreen={isFullscreen}
                 capturing={capturing}
               />
+            </div>
             </div>
           </div>
         </div>

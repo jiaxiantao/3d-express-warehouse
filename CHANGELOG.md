@@ -11,9 +11,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - 扫码定位：扫描商品 SKU 二维码（或手动输入）自动选中 3D 货位；货位面板展示商品定位码。
 - 支持 URL `?sku=SKU-1001` 深链入口，兼容 `3dew:sku:` 短码与货位码。
+- 每个货位仅在巷道正面中心贴一张货位号标签（与 `slot.id` 一致，如 `B-04-L4`）。
 
 ### Changed
 
+- 货位材质改为 `MeshStandardMaterial` 并优化仓库三点布光 + 顶灯阴影，增强货位与货架立体感。
 - 状态筛选保留未匹配货位半透明效果（独立 mesh 批次），匹配货位仍用 InstancedMesh 高亮。
 - 货位批次 `useFrame` 仅在补货动画或首屏引导时刷新，空闲时不再每帧重绘矩阵。
 - 选中描边尊重 `prefers-reduced-motion`（静态描边，无流动动画）。

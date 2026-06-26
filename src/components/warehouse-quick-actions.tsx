@@ -1,13 +1,7 @@
 "use client";
 
-import { cn } from "@/lib/utils";
+import { WarehousePerspectiveToggle } from "@/components/warehouse-perspective-toggle";
 import type { WarehouseViewMode } from "@/lib/warehouse-types";
-
-const VIEW_MODES: Array<{ id: WarehouseViewMode; label: string; description: string }> = [
-  { id: "overview", label: "全景", description: "鸟瞰整个仓库布局" },
-  { id: "aisle", label: "巷道", description: "沿巷道方向查看货架" },
-  { id: "top", label: "俯视", description: "顶视查看货位分布" },
-];
 
 type WarehouseQuickActionsProps = {
   viewMode: WarehouseViewMode;
@@ -33,33 +27,7 @@ export function WarehouseQuickActions({
 }: WarehouseQuickActionsProps) {
   return (
     <div className="flex flex-wrap items-center gap-2 rounded-2xl border border-white/10 bg-slate-950/60 p-2 shadow-xl backdrop-blur-md">
-      <div
-        role="radiogroup"
-        aria-label="仓库视角"
-        className="inline-flex rounded-full border border-white/10 bg-slate-900/80 p-1 text-xs"
-      >
-        {VIEW_MODES.map((mode) => {
-          const isActive = viewMode === mode.id;
-          return (
-            <button
-              key={mode.id}
-              type="button"
-              role="radio"
-              aria-checked={isActive}
-              title={mode.description}
-              onClick={() => onChangeViewMode(mode.id)}
-              className={cn(
-                "rounded-full px-3 py-1.5 transition-all duration-300",
-                isActive
-                  ? "bg-cyan-300 text-slate-950 shadow-md scale-105"
-                  : "text-slate-300 hover:text-white hover:bg-white/5",
-              )}
-            >
-              {mode.label}
-            </button>
-          );
-        })}
-      </div>
+      <WarehousePerspectiveToggle viewMode={viewMode} onChangeViewMode={onChangeViewMode} />
 
       <button
         type="button"

@@ -10,7 +10,8 @@ export const SLOT_STATUS_LABELS: Record<SlotStatus, string> = {
   locked: "锁定",
 };
 
-/** 提高明度与饱和度，暗色背景下更易辨认 */
+/** 状态筛选时非匹配货位/标签共用透明度 */
+export const FILTER_DIM_OPACITY = 0.22;
 export const SLOT_STATUS_COLORS: Record<SlotStatus, string> = {
   empty: "#b0bccf",
   occupied: "#5eead4",
@@ -40,7 +41,7 @@ export function getSlotSelectionOutlineColors(status: SlotStatus): {
   const base = SLOT_STATUS_COLORS[status];
   return {
     base,
-    flow: mixHexWithWhite(base, 0.42),
-    glow: mixHexWithWhite(base, 0.68),
+    flow: mixHexWithWhite(base, 0.55),
+    glow: mixHexWithWhite(base, 0.38),
   };
 }

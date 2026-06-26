@@ -33,7 +33,7 @@ export type WarehouseStats = {
   utilizationPercent: number;
 };
 
-export type WarehouseViewMode = "overview" | "aisle" | "top";
+export type WarehouseViewMode = "robot" | "third" | "god";
 
 export type SlotFilter = SlotStatus | "all";
 

@@ -161,3 +161,72 @@ export function getSlotWorldPosition(slot: {
   const aisleZ = getAisleWorldZ(slot.aisle);
   return [getBayCenterX(slot.bay), getLevelCenterY(slot.level), getSlotCenterZ(slot.side, aisleZ)];
 }
+
+/** 渲染后货位箱体半宽/半高/半深（与 warehouse-scene 缩放一致） */
+export function getSlotRenderedHalfExtents() {
+  return {
+    halfWidth: (WAREHOUSE_LAYOUT.slotWidth * SLOT_FIT_RATIO) / 2,
+    halfHeight: (WAREHOUSE_LAYOUT.slotHeight * SLOT_FIT_RATIO) / 2,
+    halfDepth: (WAREHOUSE_LAYOUT.slotDepth * SLOT_FIT_RATIO * SLOT_DEPTH_FIT_RATIO) / 2,
+  };
+}
+
+/** 巷道外侧法线：左架朝 -Z（背向巷道中线），右架朝 +Z */
+export function getSlotAisleFaceNormal(side: "left" | "right"): [number, number, number] {
+  return side === "left" ? [0, 0, -1] : [0, 0, 1];
+}
+
+/** 货位箱体朝巷道外侧那一面的几何中心（背向左右架之间的中线横梁） */
+export function getSlotAisleFaceCenter(slot: {
+  aisle: string;
+  bay: number;
+  level: number;
+  side: "left" | "right";
+}): [number, number, number] {
+  const [cx, cy, cz] = getSlotWorldPosition(slot);
+  const { halfDepth } = getSlotRenderedHalfExtents();
+
+  // 左架在巷道中线 -Z 侧，外侧为 -Z 面；右架在 +Z 侧，外侧为 +Z 面
+  const faceZ = slot.side === "left" ? cz - halfDepth : cz + halfDepth;
+
+  return [cx, cy, faceZ];
+}
+
+/** 仓储区栅栏 — 围合全部货架，机器人活动范围限于栅栏内侧 */
+export const WAREHOUSE_FENCE = {
+  /** 栅栏内侧相对货架外缘留白，供机器人沿墙行走与转弯 */
+  innerPadding: 2.6,
+  height: 1.32,
+  postSize: 0.07,
+  postSpacing: 0.9,
+  railThickness: 0.04,
+} as const;
+
+/** 全部货架在地面上的外轮廓（含左右架体深度） */
+export function getWarehouseRackFootprintBounds() {
+  const aisleZs = aisles.map((aisle) => getAisleWorldZ(aisle));
+  return {
+    minX: getRackOriginX(),
+    maxX: getRackOriginX() + getRackWidth(),
+    minZ: aisleZs[0] - rackDepth,
+    maxZ: aisleZs[aisleZs.length - 1] + rackDepth,
+  };
+}
+
+/** 栅栏内缘矩形（世界坐标，地面 XZ） */
+export function getWarehouseFenceBounds() {
+  const rack = getWarehouseRackFootprintBounds();
+  const pad = WAREHOUSE_FENCE.innerPadding;
+  return {
+    minX: rack.minX - pad,
+    maxX: rack.maxX + pad,
+    minZ: rack.minZ - pad,
+    maxZ: rack.maxZ + pad,
+  };
+}
+
+/** 点击点是否在栅栏围合的仓储区内（含边界） */
+export function isPointInsideWarehouseFence(x: number, z: number): boolean {
+  const { minX, maxX, minZ, maxZ } = getWarehouseFenceBounds();
+  return x >= minX && x <= maxX && z >= minZ && z <= maxZ;
+}

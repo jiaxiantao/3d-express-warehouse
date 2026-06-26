@@ -33,6 +33,41 @@ export type ActionVisual = {
   yLift: number;
 };
 
+export type SlotMotionState = {
+  scaleMul: number;
+  shakeX: number;
+  yLift: number;
+  interact: number;
+};
+
+export type SlotActionState = {
+  slotId: string;
+  action: SlotAction;
+  startedAt: number;
+};
+
+export function getSlotMotionState(
+  slotIndex: number,
+  slotId: string,
+  hoveredIndex: number | null,
+  actionState: SlotActionState | null,
+  now: number,
+): SlotMotionState {
+  let scaleMul = 1;
+  let shakeX = 0;
+  let yLift = 0;
+
+  if (actionState?.slotId === slotId && isActionRunning(actionState.startedAt, now)) {
+    const visual = getActionVisual(actionState.action, actionProgress(actionState.startedAt, now));
+    scaleMul = visual.scaleMul;
+    shakeX = visual.shakeX;
+    yLift = visual.yLift;
+  }
+
+  const interact = slotIndex === hoveredIndex ? 1.02 : 1;
+  return { scaleMul, shakeX, yLift, interact };
+}
+
 export function getActionVisual(action: SlotAction, progress: number): ActionVisual {
   const t = easeOutCubic(progress);
 
