@@ -57,6 +57,11 @@ export const WAREHOUSE_ROBOT = {
   minPitch: -Math.PI / 2.8,
   maxPitch: Math.PI / 3.2,
   moveSpeed: 2.6,
+  /**
+   * 起步预热时长（秒）：下达移动指令后，骨骼动画先播放此时长，
+   * 之后机器人位置才开始位移，避免「滑步」并表现出蓄力起步。
+   */
+  moveWarmupSeconds: 0,
   arriveDistance: 0.05,
   /** 绕自身竖直轴（Y）转弯的角速度（弧度/秒），恒定速度避免位跳 */
   turnSpeed: 3.4,
@@ -75,6 +80,11 @@ export const WAREHOUSE_ROBOT = {
     walkFadeOut: 0.28,
     turnLeanAmplitude: 0,
     turnLeanDamp: 0.14,
+    /**
+     * 起播相位（0~1，相对片段总时长）：跳过行走片段开头的「前摇」过渡帧，
+     * 让起步瞬间直接进入迈步动作。0 表示从头播放，调大可跳过更多前摇。
+     */
+    walkStartPhase: 0.18,
   },
   /** 机身碰撞半径，用于巷道边界留白 */
   bodyRadius: 0.38,

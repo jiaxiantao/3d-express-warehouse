@@ -240,7 +240,7 @@ export default function WarehousePage() {
           />
 
           <div className="pointer-events-none absolute inset-0">
-            <div className="absolute bottom-[6.75rem] left-4 z-10 sm:bottom-24">
+            <div className="absolute bottom-[6.75rem] right-4 z-10 sm:bottom-24">
               <WarehouseRobotPad sceneHandleRef={sceneHandleRef} />
             </div>
 

@@ -49,6 +49,8 @@ export function WarehouseRobotControls({
   const { camera, gl, invalidate } = useThree();
   const synced = useRef(false);
   const moving = useRef(false);
+  // 起步预热计时：累计「想要位移」的时长，达到阈值前只播动画不移动
+  const moveWarmup = useRef(0);
   const prevPivotYaw = useRef<number>(WAREHOUSE_ROBOT.spawn.yaw);
   const pointerHeld = useRef(false);
   const dragging = useRef(false);
@@ -159,6 +161,8 @@ export function WarehouseRobotControls({
     let moveSpeedRatio = 0;
     let moveSign = 0;
     let turnRate = 0;
+    // 本帧是否「想要位移」：用于驱动起步预热计时与动画起播
+    let translateIntent = false;
     const prevX = pivot.position.x;
     const prevZ = pivot.position.z;
     const prevYaw = pivot.rotation.y;
@@ -181,17 +185,22 @@ export function WarehouseRobotControls({
       // 再沿（转向后的）机身朝向前进/后退
       if (drive.move) {
         moveSign = drive.move === "forward" ? 1 : -1;
-        const unit = getBodyForwardUnitVector(pivot.rotation.y, drive.move);
-        const step = WAREHOUSE_ROBOT.moveSpeed * delta;
-        const next = stepRobotTowardTarget(
-          pivot.position.x,
-          pivot.position.z,
-          pivot.position.x + unit.x,
-          pivot.position.z + unit.z,
-          step,
-        );
-        pivot.position.x = next.x;
-        pivot.position.z = next.z;
+        translateIntent = true;
+        moveWarmup.current += delta;
+        // 预热满 1 秒后才真正位移（动画先动）
+        if (moveWarmup.current >= WAREHOUSE_ROBOT.moveWarmupSeconds) {
+          const unit = getBodyForwardUnitVector(pivot.rotation.y, drive.move);
+          const step = WAREHOUSE_ROBOT.moveSpeed * delta;
+          const next = stepRobotTowardTarget(
+            pivot.position.x,
+            pivot.position.z,
+            pivot.position.x + unit.x,
+            pivot.position.z + unit.z,
+            step,
+          );
+          pivot.position.x = next.x;
+          pivot.position.z = next.z;
+        }
       }
 
       moving.current = true;
@@ -212,16 +221,21 @@ export function WarehouseRobotControls({
 
         if (Math.abs(yawError) <= WAREHOUSE_ROBOT.turnAlignThreshold) {
           moveSign = 1;
-          const step = WAREHOUSE_ROBOT.moveSpeed * delta;
-          const next = stepRobotTowardTarget(
-            pivot.position.x,
-            pivot.position.z,
-            target.x,
-            target.z,
-            step,
-          );
-          pivot.position.x = next.x;
-          pivot.position.z = next.z;
+          translateIntent = true;
+          moveWarmup.current += delta;
+          // 转向对齐后预热满 1 秒才前进（动画先动）
+          if (moveWarmup.current >= WAREHOUSE_ROBOT.moveWarmupSeconds) {
+            const step = WAREHOUSE_ROBOT.moveSpeed * delta;
+            const next = stepRobotTowardTarget(
+              pivot.position.x,
+              pivot.position.z,
+              target.x,
+              target.z,
+              step,
+            );
+            pivot.position.x = next.x;
+            pivot.position.z = next.z;
+          }
         }
 
         moving.current = true;
@@ -242,6 +256,11 @@ export function WarehouseRobotControls({
       }
     } else if (!driving) {
       moving.current = false;
+    }
+
+    // 没有位移意图（松开按键/转向中/到站）则清零预热，下次起步重新蓄力 1 秒
+    if (!translateIntent) {
+      moveWarmup.current = 0;
     }
 
     const moveDx = pivot.position.x - prevX;
